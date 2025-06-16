@@ -1,191 +1,207 @@
 import os
 import subprocess
-from typing import Optional
+from typing import Optional, List, Dict
 import typer
 from rich.console import Console
 from rich.prompt import Prompt
 from rich.panel import Panel
+from rich.markdown import Markdown
+from rich.spinner import Spinner
 import json
 from pathlib import Path
 import ollama
 from datetime import datetime
-from rich.spinner import Spinner
 import time
+from ollama import Client
+from rich.table import Table
+from rich.align import Align
 
 # Initialize Typer app and Rich console
 app = typer.Typer()
 console = Console()
 
-# History file path
-HISTORY_FILE = Path.home() / ".ai_terminal_history.json"
-SCRIPTS_DIR = Path.home() / ".ai_terminal_scripts"
-
-# Available models
+# Constants
+HISTORY_FILE = os.path.expanduser("~/.ai_terminal_history.json")
+SCRIPTS_DIR = os.path.expanduser("~/.ai_terminal_scripts")
 AVAILABLE_MODELS = {
     "deepseek-coder": "deepseek-coder",
     "deepseek-r1": "deepseek-r1"
 }
+DEFAULT_MODEL = "deepseek-coder"
 
-# Create scripts directory if it doesn't exist
-SCRIPTS_DIR.mkdir(exist_ok=True)
-
-def load_history():
+def load_history() -> list:
     """Load command history from file."""
-    if HISTORY_FILE.exists():
-        with open(HISTORY_FILE, "r") as f:
+    if os.path.exists(HISTORY_FILE):
+        with open(HISTORY_FILE, 'r') as f:
             return json.load(f)
     return []
 
-def save_history(history):
+def save_history(history: list):
     """Save command history to file."""
-    with open(HISTORY_FILE, "w") as f:
+    os.makedirs(os.path.dirname(HISTORY_FILE), exist_ok=True)
+    with open(HISTORY_FILE, 'w') as f:
         json.dump(history, f)
 
-def get_ai_suggestion(user_input: str, history: list, model_type: str, mode: str = "command") -> str:
-    """Get AI suggestion based on the mode."""
+def get_ai_suggestion(user_input: str, history: List[Dict[str, str]], model: str, mode: str = "command") -> str:
+    """Get AI suggestion based on user input and mode."""
     try:
+        # Construct prompt based on mode
         if mode == "command":
-            prompt = "You are a helpful terminal assistant. Convert the following request into an appropriate terminal command. Only respond with the command, no explanations.\n\n"
+            prompt = f"Convert this request to a shell command: {user_input}"
         elif mode == "explain":
-            prompt = "You are a helpful terminal assistant. Explain the following command in detail, breaking down each part and its purpose. Be concise but informative.\n\n"
+            prompt = f"Explain this shell command: {user_input}"
         elif mode == "fix":
-            prompt = "You are a helpful terminal assistant. Fix the following incorrect command and explain what was wrong. Only respond with the fixed command.\n\n"
+            prompt = f"Fix this incorrect shell command: {user_input}"
         elif mode == "chat":
-            prompt = "You are a helpful terminal assistant. Provide a clear and concise response to the following technical question.\n\n"
+            prompt = f"Answer this technical question: {user_input}"
         elif mode == "search":
-            prompt = "You are a helpful terminal assistant. Generate a command to search for files based on the following description. Only respond with the command.\n\n"
-        
-        # Add relevant history for command mode
-        if mode == "command":
-            for entry in history[-5:]:
-                prompt += f"Request: {entry['request']}\nCommand: {entry['command']}\n\n"
-        
-        prompt += f"Request: {user_input}\n"
-        if mode == "command":
-            prompt += "Command:"
-        elif mode == "explain":
-            prompt += "Explanation:"
-        elif mode == "fix":
-            prompt += "Fixed command:"
-        elif mode == "chat":
-            prompt += "Response:"
-        elif mode == "search":
-            prompt += "Search command:"
-        
-        # Add loading spinner
-        with Spinner("Thinking...", text="Processing your request"):
-            response = ollama.generate(
-                model=AVAILABLE_MODELS[model_type],
-                prompt=prompt
-            )
-        return response['response'].strip()
+            prompt = f"Convert this search request to a find command: {user_input}"
+        else:
+            prompt = user_input
+
+        # Add history context if available
+        if history:
+            history_context = "\n".join([f"Request: {h['request']}\nCommand: {h['command']}" for h in history[-5:]])
+            prompt = f"Previous commands:\n{history_context}\n\nNew request: {prompt}"
+
+        # Show loading spinner
+        with console.status("[bold green]Đang xử lý...[/bold green]"):
+            # Get response from Ollama
+            client = Client()
+            response = client.generate(model=model, prompt=prompt)
+            # Extract the response text from the dictionary
+            return response.get('response', 'Không nhận được phản hồi từ AI')
+
     except Exception as e:
         console.print(f"[red]Error getting AI suggestion: {str(e)}[/red]")
         return None
 
 def execute_command(command: str) -> tuple[bool, str]:
-    """Execute a terminal command and return success status and output."""
+    """Execute a shell command and return success status and output."""
     try:
-        result = subprocess.run(
-            command,
-            shell=True,
-            capture_output=True,
-            text=True
-        )
-        return result.returncode == 0, result.stdout or result.stderr
+        result = os.popen(command).read()
+        return True, result
     except Exception as e:
         return False, str(e)
 
-def save_to_script(commands: list, description: str):
-    """Save commands to a shell script."""
+def save_script(history: list, description: str = ""):
+    """Save current session commands as a shell script."""
+    os.makedirs(SCRIPTS_DIR, exist_ok=True)
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    script_path = SCRIPTS_DIR / f"ai_terminal_script_{timestamp}.sh"
+    filename = f"{SCRIPTS_DIR}/script_{timestamp}.sh"
     
-    with open(script_path, "w") as f:
+    with open(filename, 'w') as f:
         f.write("#!/bin/bash\n\n")
-        f.write(f"# Generated by AI Terminal Assistant\n")
-        f.write(f"# Description: {description}\n")
-        f.write(f"# Generated on: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n\n")
+        if description:
+            f.write(f"# {description}\n")
+        f.write(f"# Generated on {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n\n")
         
-        for cmd in commands:
-            f.write(f"# {cmd['request']}\n")
-            f.write(f"{cmd['command']}\n\n")
+        for entry in history:
+            f.write(f"# {entry['request']}\n")
+            f.write(f"{entry['command']}\n\n")
     
-    os.chmod(script_path, 0o755)
-    return script_path
+    os.chmod(filename, 0o755)
+    return filename
 
 @app.command()
-def main(
-    model: str = typer.Option(
-        "deepseek-coder",
-        help="Choose the AI model to use (deepseek-coder or deepseek-r1)"
-    )
-):
-    """Start the AI Terminal Assistant."""
+def main(model: str = DEFAULT_MODEL):
+    """AI Terminal Assistant main function."""
     if model not in AVAILABLE_MODELS:
-        console.print(f"[red]Model '{model}' is not supported. Choose from: {', '.join(AVAILABLE_MODELS.keys())}[/red]")
-        raise typer.Exit(code=1)
+        console.print(Panel(f"[red]Lỗi: Model {model} không khả dụng.\nCác model hỗ trợ: {', '.join(AVAILABLE_MODELS.keys())}[/red]", title="[bold red]Lỗi Model[/bold red]", border_style="red"))
+        return
 
-    console.print(Panel.fit(
-        f"[bold blue]AI Terminal Assistant[/bold blue]\n"
-        f"Using model: [yellow]{model}[/yellow]\n"
-        "Type your request in natural language.\n"
-        "Type 'help' for available commands or 'exit' to quit.",
-        title="Welcome"
-    ))
-    
+    # Load history
     history = load_history()
-    current_session_commands = []
+    
+    # Welcome message
+    welcome_panel = Panel(
+        Align.center(
+            f"""
+[bold cyan]AI Terminal Assistant[/bold cyan]
+[green]Trợ lý AI giúp bạn làm việc với terminal hiệu quả hơn[/green]
+[bold yellow]Model:[/bold yellow] [white]{model}[/white]
+
+[dim]Gõ lệnh tự nhiên hoặc 'help' để xem hướng dẫn[/dim]
+            """,
+            vertical="middle"
+        ),
+        title="[bold blue]Chào mừng[/bold blue]",
+        border_style="bright_magenta",
+        padding=(1, 4),
+    )
+    console.print(welcome_panel)
     
     while True:
         try:
-            user_input = Prompt.ask("\n[bold green]What would you like to do?[/bold green]")
+            # Stylish prompt
+            user_input = Prompt.ask("[bold green]Bạn muốn làm gì?[/bold green]", default="help")
             
-            if user_input.lower() == "exit":
+            # Đổi model động
+            if user_input.lower().startswith('model '):
+                new_model = user_input[6:].strip()
+                if new_model in AVAILABLE_MODELS:
+                    model = new_model
+                    console.print(Panel(f"[green]Đã chuyển sang model:[/green] [bold]{model}[/bold]", border_style="green"))
+                else:
+                    console.print(Panel(f"[red]Model '{new_model}' không khả dụng.\nCác model hỗ trợ: {', '.join(AVAILABLE_MODELS.keys())}[/red]", border_style="red"))
+                continue
+            
+            # Handle special commands
+            if user_input.lower() == 'exit':
+                console.print(Panel("[bold yellow]Tạm biệt! Hẹn gặp lại.[/bold yellow]", border_style="yellow"))
                 break
-            elif user_input.lower() == "help":
-                console.print(Panel.fit(
-                    "[bold]Available Commands:[/bold]\n"
-                    "- Type your request in natural language\n"
-                    "- help: Show this help message\n"
-                    "- exit: Quit the assistant\n"
-                    "- history: Show command history\n"
-                    "- model: Show current model and available models\n"
-                    "- explain <command>: Explain a command\n"
-                    "- fix <command>: Fix an incorrect command\n"
-                    "- chat <question>: Ask a technical question\n"
-                    "- search <description>: Generate file search command\n"
-                    "- save: Save current session commands to script",
-                    title="Help"
-                ))
+            elif user_input.lower() == 'help':
+                help_panel = Panel(
+                    Align.left(
+                        """
+[bold]Các lệnh đặc biệt:[/bold]
+- help: Hiển thị hướng dẫn
+- exit: Thoát chương trình
+- history: Xem lịch sử lệnh
+- model: Xem thông tin mô hình hoặc đổi model (model <tên_model>)
+- save: Lưu phiên làm việc thành script
+
+[bold]Chế độ thông minh:[/bold]
+- explain <lệnh>: Giải thích lệnh
+- fix <lệnh>: Sửa lệnh sai
+- chat <câu hỏi>: Hỏi đáp kỹ thuật
+- search <mô tả>: Tìm kiếm file
+                        """
+                    ),
+                    title="[bold cyan]Hướng dẫn sử dụng[/bold cyan]",
+                    border_style="cyan",
+                    padding=(1, 2)
+                )
+                console.print(help_panel)
                 continue
-            elif user_input.lower() == "history":
-                if history:
-                    console.print("\n[bold]Command History:[/bold]")
-                    for entry in history[-10:]:
-                        console.print(f"[cyan]Request:[/cyan] {entry['request']}")
-                        console.print(f"[green]Command:[/green] {entry['command']}")
-                        console.print(f"[yellow]Status:[/yellow] {'Success' if entry['success'] else 'Failed'}\n")
+            elif user_input.lower() == 'history':
+                if not history:
+                    console.print(Panel("[yellow]Chưa có lịch sử lệnh nào.[/yellow]", border_style="yellow"))
                 else:
-                    console.print("[yellow]No command history available.[/yellow]")
+                    table = Table(title="[bold green]Lịch sử lệnh[/bold green]", show_lines=True, header_style="bold magenta")
+                    table.add_column("#", style="dim", width=4)
+                    table.add_column("Yêu cầu", style="cyan")
+                    table.add_column("Lệnh", style="green")
+                    table.add_column("Thời gian", style="yellow")
+                    for idx, entry in enumerate(history[-10:], 1):
+                        table.add_row(str(idx), entry['request'], entry['command'], entry.get('timestamp', '-'))
+                    console.print(table)
                 continue
-            elif user_input.lower() == "model":
-                console.print("\n[bold]Available Models:[/bold]")
-                for model_name in AVAILABLE_MODELS:
-                    console.print(f"- {model_name}: {AVAILABLE_MODELS[model_name]}")
-                console.print(f"\n[bold]Current Model:[/bold] {model}")
+            elif user_input.lower() == 'model':
+                model_panel = Panel(
+                    f"[bold]Model hiện tại:[/bold] [green]{model}[/green]\n[bold]Các model khả dụng:[/bold] [cyan]{', '.join(AVAILABLE_MODELS.keys())}[/cyan]",
+                    title="[bold blue]Thông tin mô hình[/bold blue]",
+                    border_style="blue"
+                )
+                console.print(model_panel)
                 continue
-            elif user_input.lower() == "save":
-                if current_session_commands:
-                    description = Prompt.ask("Enter a description for the script")
-                    script_path = save_to_script(current_session_commands, description)
-                    console.print(f"[green]Script saved to: {script_path}[/green]")
-                    current_session_commands = []
-                else:
-                    console.print("[yellow]No commands to save in current session.[/yellow]")
+            elif user_input.lower() == 'save':
+                description = Prompt.ask("[bold yellow]Nhập mô tả cho script (tùy chọn)[/bold yellow]", default="")
+                filename = save_script(history, description)
+                console.print(Panel(f"[green]Script đã lưu tại:[/green] [bold]{filename}[/bold]", border_style="green"))
                 continue
             
-            # Handle different modes
+            # Determine mode
             mode = "command"
             if user_input.lower().startswith("explain "):
                 mode = "explain"
@@ -205,39 +221,39 @@ def main(
             if not response:
                 continue
             
+            # Handle response based on mode
             if mode == "command":
-                # Confirm command execution
-                console.print(f"\n[bold]Suggested command:[/bold] {response}")
-                if Prompt.ask("Execute this command?", choices=["y", "n"], default="y") == "y":
+                command_panel = Panel(
+                    f"[bold green]Lệnh gợi ý:[/bold green]\n[white]{response}[/white]",
+                    title="[bold green]Gợi ý lệnh[/bold green]",
+                    border_style="green"
+                )
+                console.print(command_panel)
+                if Prompt.ask("[bold yellow]Bạn có muốn thực thi lệnh này không?[/bold yellow]", choices=["y", "n"], default="n") == "y":
                     success, output = execute_command(response)
-                    
-                    # Save to history and current session
-                    command_entry = {
-                        "request": user_input,
-                        "command": response,
-                        "success": success
-                    }
-                    history.append(command_entry)
-                    current_session_commands.append(command_entry)
-                    save_history(history)
-                    
-                    # Display result
                     if success:
-                        console.print("[green]Command executed successfully![/green]")
-                        if output:
-                            console.print(f"\n[bold]Output:[/bold]\n{output}")
+                        console.print(Panel("[green]Lệnh đã thực thi thành công![/green]", border_style="green"))
+                        console.print(Panel(output, border_style="bright_black", title="[bold]Kết quả[/bold]"))
+                        history.append({
+                            "request": user_input,
+                            "command": response,
+                            "timestamp": datetime.now().isoformat()
+                        })
+                        save_history(history)
                     else:
-                        console.print("[red]Command failed![/red]")
-                        if output:
-                            console.print(f"\n[bold]Error:[/bold]\n{output}")
+                        console.print(Panel(f"[red]Lỗi khi thực thi lệnh:[/red]\n{output}", border_style="red"))
             else:
-                # Display response for other modes
-                console.print(f"\n[bold]Response:[/bold]\n{response}")
-            
+                result_panel = Panel(
+                    response,
+                    title="[bold magenta]Kết quả[/bold magenta]",
+                    border_style="magenta"
+                )
+                console.print(result_panel)
+        
         except KeyboardInterrupt:
-            console.print("\n[yellow]Use 'exit' to quit the assistant.[/yellow]")
+            console.print("\n[yellow]Dùng 'exit' để thoát chương trình[/yellow]")
         except Exception as e:
-            console.print(f"[red]An error occurred: {str(e)}[/red]")
+            console.print(Panel(f"[red]Lỗi: {str(e)}[/red]", border_style="red"))
 
 if __name__ == "__main__":
     app() 
