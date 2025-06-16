@@ -2,7 +2,7 @@
 
 <div align="center">
 
-![Version](https://img.shields.io/badge/version-1.0.0-blue.svg)
+![Version](https://img.shields.io/badge/version-1.1-blue.svg)
 ![Python](https://img.shields.io/badge/python-3.8+-blue.svg)
 ![License](https://img.shields.io/badge/license-MIT-green.svg)
 
@@ -134,15 +134,24 @@ python main.py --model deepseek-coder
 python main.py --model deepseek-r1
 ```
 
-### Các lệnh có sẵn
+### Các lệnh có sẵn  
+Các lệnh đặc biệt:
 | Lệnh | Mô tả |
 |------|--------|
 | `help` | Hiển thị trợ giúp |
 | `exit` | Thoát chương trình |
 | `history` | Xem lịch sử lệnh |
 | `model` | Xem/đổi thông tin mô hình |
-| `save` | Lưu các lệnh thành script |
+| `save` | Lưu các lệnh thành script |  
 
+Các lệnh thông minh:  
+| Lệnh | Mô tả |
+|------|--------|
+| `explain <lệnh>` | Giải thích lệnh |
+| `fix <lệnh>` | Sửa lệnh sai  |
+| `chat <câu hỏi>` | Hỏi đáp kỹ thuật |
+| `search <mô tả>` | Tìm kiếm file |
+| `ask <câu hỏi>` | Hỏi câu hỏi thường ngày |
 ### Ví dụ sử dụng
 1. **Gợi ý lệnh**:
 ```bash
@@ -188,9 +197,9 @@ What would you like to do? search Tìm file log trong /var/log
 Chúng tôi rất hoan nghênh mọi đóng góp! Hãy tham gia phát triển dự án bằng cách:
 
 1. Fork dự án
-2. Tạo branch mới (`git checkout -b feature/AmazingFeature`)
-3. Commit thay đổi (`git commit -m 'Add some AmazingFeature'`)
-4. Push lên branch (`git push origin feature/AmazingFeature`)
+2. Tạo branch mới
+3. Commit thay đổi
+4. Push lên branch
 5. Tạo Pull Request
 
 ## 📝 License
@@ -198,5 +207,5 @@ Dự án này được cấp phép theo giấy phép MIT - xem file [LICENSE](LI
 
 ---
 <div align="center">
-Made with ❤️ by xyanua.
+Tạo bởi xyanua.  
 </div>
