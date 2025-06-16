@@ -189,12 +189,7 @@ Chúng tôi rất hoan nghênh mọi đóng góp! Hãy tham gia phát triển d�
 ## 📝 License
 Dự án này được cấp phép theo giấy phép MIT - xem file [LICENSE](LICENSE) để biết thêm chi tiết.
 
-## 📞 Liên hệ
-- Tác giả: [Your Name]
-- Email: [your.email@example.com]
-- GitHub: [github.com/yourusername]
-
 ---
 <div align="center">
-Made with ❤️ by [Your Name]
+Made with ❤️ by xyanua.
 </div> 
