@@ -32,6 +32,7 @@ AI Terminal Assistant là một công cụ mạnh mẽ giúp bạn tương tác 
 - Chuyển đổi yêu cầu ngôn ngữ tự nhiên thành lệnh terminal
 - Hỗ trợ nhiều ngôn ngữ khác nhau
 - Đề xuất lệnh phù hợp với ngữ cảnh
+- Giao diện thân thiện với người dùng
 
 ```bash
 # Ví dụ:
@@ -43,6 +44,7 @@ AI Terminal Assistant là một công cụ mạnh mẽ giúp bạn tương tác 
 - Giải thích chi tiết từng thành phần của lệnh
 - Phân tích mục đích và tác dụng của các tham số
 - Cung cấp ví dụ sử dụng
+- Hiển thị kết quả rõ ràng, dễ đọc
 
 ```bash
 # Ví dụ:
@@ -54,6 +56,7 @@ explain sudo netstat -tulnp
 - Phát hiện và sửa lỗi cú pháp
 - Đề xuất lệnh thay thế
 - Hướng dẫn khắc phục sự cố
+- Thông báo lỗi rõ ràng, dễ hiểu
 
 ```bash
 # Ví dụ:
@@ -65,6 +68,7 @@ fix chmod 777 / → chmod 755 /
 - Trả lời câu hỏi về hệ thống
 - Hướng dẫn cài đặt và cấu hình
 - Giải thích khái niệm kỹ thuật
+- Tương tác tự nhiên, dễ hiểu
 
 ```bash
 # Ví dụ:
@@ -76,6 +80,7 @@ chat "Giải thích về SELinux"
 - Tạo lệnh tìm kiếm tối ưu
 - Hỗ trợ tìm kiếm theo nhiều tiêu chí
 - Tích hợp với các công cụ tìm kiếm phổ biến
+- Kết quả được hiển thị rõ ràng
 
 ```bash
 # Ví dụ:
@@ -87,6 +92,7 @@ search "Tìm file lớn hơn 1GB trong /home"
 - Tự động tạo và quản lý script
 - Lưu trữ lịch sử lệnh
 - Tích hợp với hệ thống quản lý phiên bản
+- Giao diện quản lý trực quan
 
 ```bash
 # Ví dụ:
@@ -134,7 +140,7 @@ python main.py --model deepseek-r1
 | `help` | Hiển thị trợ giúp |
 | `exit` | Thoát chương trình |
 | `history` | Xem lịch sử lệnh |
-| `model` | Xem thông tin mô hình |
+| `model` | Xem/đổi thông tin mô hình |
 | `save` | Lưu các lệnh thành script |
 
 ### Ví dụ sử dụng
@@ -176,6 +182,7 @@ What would you like to do? search Tìm file log trong /var/log
 - Lịch sử lệnh: `~/.ai_terminal_history.json`
 - Script được lưu: `~/.ai_terminal_scripts/`
 - Có thể thay đổi mô hình mặc định trong code
+- Giao diện được tùy chỉnh với Rich
 
 ## 🤝 Đóng góp
 Chúng tôi rất hoan nghênh mọi đóng góp! Hãy tham gia phát triển dự án bằng cách:
@@ -192,4 +199,4 @@ Dự án này được cấp phép theo giấy phép MIT - xem file [LICENSE](LI
 ---
 <div align="center">
 Made with ❤️ by xyanua.
-</div> 
+</div>
