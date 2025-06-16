@@ -117,7 +117,7 @@ def main(model: str = DEFAULT_MODEL):
     welcome_panel = Panel(
         Align.center(
             f"""
-[bold cyan]AI Terminal Assistant[/bold cyan]
+[bold cyan]AI Terminal Assistant[/bold cyan] [bold magenta]bởi:[/bold magenta] [white]xyanua.[/white]
 [green]Trợ lý AI giúp bạn làm việc với terminal hiệu quả hơn[/green]
 [bold yellow]Model:[/bold yellow] [white]{model}[/white]
 
