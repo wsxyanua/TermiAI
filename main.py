@@ -47,22 +47,24 @@ def get_ai_suggestion(user_input: str, history: List[Dict[str, str]], model: str
     try:
         # Construct prompt based on mode
         if mode == "command":
-            prompt = f"Convert this request to a shell command: {user_input}"
+            prompt = f"Chuyển đổi yêu cầu này thành lệnh shell: {user_input}"
         elif mode == "explain":
-            prompt = f"Explain this shell command: {user_input}"
+            prompt = f"Giải thích lệnh shell này: {user_input}"
         elif mode == "fix":
-            prompt = f"Fix this incorrect shell command: {user_input}"
+            prompt = f"Sửa lệnh shell không đúng này: {user_input}"
         elif mode == "chat":
-            prompt = f"Answer this technical question: {user_input}"
+            prompt = f"Trả lời câu hỏi kỹ thuật này: {user_input}"
         elif mode == "search":
-            prompt = f"Convert this search request to a find command: {user_input}"
+            prompt = f"Chuyển đổi yêu cầu tìm kiếm này thành lệnh find: {user_input}"
+        elif mode == "daily":
+            prompt = f"Trả lời câu hỏi thường ngày này một cách thân thiện và hữu ích: {user_input}"
         else:
             prompt = user_input
 
         # Add history context if available
         if history:
-            history_context = "\n".join([f"Request: {h['request']}\nCommand: {h['command']}" for h in history[-5:]])
-            prompt = f"Previous commands:\n{history_context}\n\nNew request: {prompt}"
+            history_context = "\n".join([f"Yêu cầu: {h['request']}\nLệnh: {h['command']}" for h in history[-5:]])
+            prompt = f"Các lệnh trước đó:\n{history_context}\n\nYêu cầu mới: {prompt}"
 
         # Show loading spinner
         with console.status("[bold green]Đang xử lý...[/bold green]"):
@@ -73,7 +75,7 @@ def get_ai_suggestion(user_input: str, history: List[Dict[str, str]], model: str
             return response.get('response', 'Không nhận được phản hồi từ AI')
 
     except Exception as e:
-        console.print(f"[red]Error getting AI suggestion: {str(e)}[/red]")
+        console.print(f"[red]Lỗi khi lấy gợi ý từ AI: {str(e)}[/red]")
         return None
 
 def execute_command(command: str) -> tuple[bool, str]:
@@ -117,7 +119,7 @@ def main(model: str = DEFAULT_MODEL):
     welcome_panel = Panel(
         Align.center(
             f"""
-[bold cyan]AI Terminal Assistant[/bold cyan] [bold magenta]bởi:[/bold magenta] [white]xyanua.[/white]
+[bold cyan]AI Terminal Assistant[/bold cyan] [bold magenta]bởi:[/bold magenta] [italic]xyanua.[/italic]
 [green]Trợ lý AI giúp bạn làm việc với terminal hiệu quả hơn[/green]
 [bold yellow]Model:[/bold yellow] [white]{model}[/white]
 
@@ -166,6 +168,7 @@ def main(model: str = DEFAULT_MODEL):
 - fix <lệnh>: Sửa lệnh sai
 - chat <câu hỏi>: Hỏi đáp kỹ thuật
 - search <mô tả>: Tìm kiếm file
+- ask <câu hỏi>: Hỏi câu hỏi thường ngày
                         """
                     ),
                     title="[bold cyan]Hướng dẫn sử dụng[/bold cyan]",
@@ -215,6 +218,9 @@ def main(model: str = DEFAULT_MODEL):
             elif user_input.lower().startswith("search "):
                 mode = "search"
                 user_input = user_input[7:]
+            elif user_input.lower().startswith("ask "):
+                mode = "daily"
+                user_input = user_input[4:]
             
             # Get AI suggestion with loading spinner
             response = get_ai_suggestion(user_input, history, model, mode)
